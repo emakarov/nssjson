@@ -1,7 +1,7 @@
 Changes
 -------
 
-0.5 (unreleased)
+0.5 (2014-12-21)
 ~~~~~~~~~~~~~~~~
 
 * Fix memory leak when an error occurs encoding dict items
