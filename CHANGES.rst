@@ -1,6 +1,13 @@
 Changes
 -------
 
+0.6 (unreleased)
+~~~~~~~~~~~~~~~~
+
+* Avoid broken JSON output for int/long/float subclasses reimplementing the __str__()
+  and/or __repr__() methods
+
+
 0.5 (2014-12-21)
 ~~~~~~~~~~~~~~~~
 
