@@ -346,6 +346,9 @@ class JSONEncoder(object):
             elif o == _neginf:
                 text = '-Infinity'
             else:
+                if type(o) != float:
+                    # See #118, do not trust custom str/repr
+                    o = float(o)
                 return _repr(o)
 
             if ignore_nan:
@@ -473,6 +476,9 @@ def _make_iterencode(
             elif value is False:
                 yield buf + 'false'
             elif isinstance(value, integer_types):
+                if type(value) not in integer_types:
+                    # See #118, do not trust custom str/repr
+                    value = int(value)
                 yield ((buf + str(value))
                        if (not _bigint_as_string or
                            (-1 << 53) < value < (1 << 53))
@@ -533,6 +539,9 @@ def _make_iterencode(
         elif key is None:
             key = 'null'
         elif isinstance(key, integer_types):
+            if (key) not in integer_types:
+                # See #118, do not trust custom str/repr
+                key = int(key)
             key = str(key)
         elif _use_decimal and isinstance(key, Decimal):
             key = str(key)
@@ -609,6 +618,9 @@ def _make_iterencode(
             elif value is False:
                 yield 'false'
             elif isinstance(value, integer_types):
+                if type(value) not in integer_types:
+                    # See #118, do not trust custom str/repr
+                    value = int(value)
                 yield (str(value)
                        if (not _bigint_as_string or
                            (-1 << 53) < value < (1 << 53))
@@ -665,6 +677,9 @@ def _make_iterencode(
         elif o is False:
             yield 'false'
         elif isinstance(o, integer_types):
+            if type(o) not in integer_types:
+                # See #118, do not trust custom str/repr
+                o = int(o)
             yield (str(o)
                    if (not _bigint_as_string or
                        (-1 << 53) < o < (1 << 53))

@@ -42,6 +42,7 @@ def all_tests_suite():
         'nssjson.tests.test_namedtuple',
         'nssjson.tests.test_tool',
         'nssjson.tests.test_for_json',
+        'nssjson.tests.test_subclass',
     ])
     return additional_tests(suite)
 

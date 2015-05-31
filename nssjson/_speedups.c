@@ -11,6 +11,7 @@
 #define PyString_AS_STRING PyBytes_AS_STRING
 #define PyString_FromStringAndSize PyBytes_FromStringAndSize
 #define PyInt_Check(obj) 0
+#define PyInt_CheckExact(obj) 0
 #define JSON_UNICHR Py_UCS4
 #define JSON_InternFromString PyUnicode_InternFromString
 #define JSON_Intern_GET_SIZE PyUnicode_GET_SIZE
@@ -784,7 +785,19 @@ encoder_stringify_key(PyEncoderObject *s, PyObject *key)
         return _encoded_const(key);
     }
     else if (PyInt_Check(key) || PyLong_Check(key)) {
-        return PyObject_Str(key);
+        if (!(PyInt_CheckExact(key) || PyLong_CheckExact(key))) {
+            /* See #118, do not trust custom str/repr */
+            PyObject *tmp = PyObject_CallFunctionObjArgs((PyObject *)&PyLong_Type, key, NULL);
+            if (tmp == NULL) {
+                return NULL;
+            }
+            PyObject *res = PyObject_Str(tmp);
+            Py_DECREF(tmp);
+            return res;
+        }
+        else {
+            return PyObject_Str(key);
+        }
     }
     else if (s->use_decimal && PyObject_TypeCheck(key, (PyTypeObject *)s->Decimal)) {
         return PyObject_Str(key);
@@ -3188,7 +3201,19 @@ encoder_encode_float(PyEncoderObject *s, PyObject *obj)
         }
     }
     /* Use a better float format here? */
-    return PyObject_Repr(obj);
+    if (PyFloat_CheckExact(obj)) {
+        return PyObject_Repr(obj);
+    }
+    else {
+        /* See #118, do not trust custom str/repr */
+        PyObject *tmp = PyObject_CallFunctionObjArgs((PyObject *)&PyFloat_Type, obj, NULL);
+        if (tmp == NULL) {
+            return NULL;
+        }
+        PyObject *res = PyObject_Repr(tmp);
+        Py_DECREF(tmp);
+        return res;
+    }
 }
 
 static PyObject *
@@ -3229,7 +3254,22 @@ encoder_listencode_obj(PyEncoderObject *s, json_accumulator *rval, PyObject *obj
                 rv = _steal_accumulate(rval, encoded);
         }
         else if (PyInt_Check(obj) || PyLong_Check(obj)) {
-            PyObject *encoded = PyObject_Str(obj);
+            PyObject *encoded;
+            if (PyInt_CheckExact(obj) || PyLong_CheckExact(obj)) {
+                encoded = PyObject_Str(obj);
+            }
+            else {
+                /* See #118, do not trust custom str/repr */
+                PyObject *tmp = PyObject_CallFunctionObjArgs((PyObject *)&PyLong_Type, obj, NULL);
+                if (tmp == NULL) {
+                    encoded = NULL;
+                }
+                else {
+                    encoded = PyObject_Str(tmp);
+                    Py_DECREF(tmp);
+                }
+            }
+
             if (encoded != NULL) {
                 if (s->bigint_as_string) {
                     encoded = maybe_quote_bigint(encoded, obj);
