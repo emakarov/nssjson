@@ -436,9 +436,9 @@ class JSONDecoder(object):
           string of every JSON float to be decoded; this can be used to use another datatype or
           parser for JSON floats (e.g. :class:`decimal.Decimal`) [default: ``float(num_str)``]
 
-        :keyword X parse_int: if specified, a function that will be called with the string of
-          every JSON int to be decoded; this can be used to use another datatype or parser for
-          JSON integers (e.g. :class:`float`) [default: ``int(num_str)``]
+        :keyword callable parse_int: if specified, a function that will be called with the
+          string of every JSON int to be decoded; this can be used to use another datatype or
+          parser for JSON integers (e.g. :class:`float`) [default: ``int(num_str)``]
 
         :keyword bool strict: controls the parser's behavior when it encounters an invalid
           control character in a string: ``True`` means that unescaped control characters are
