@@ -73,7 +73,9 @@ publish: pypi-upload
 test:
 	python2.7 setup.py test
 	python3.4 setup.py test
-	tf=$(shell tempfile --suffix .py) \
-	    && python3.4 -c "import nssjson; print(repr(nssjson.__doc__))" > $$tf \
+	tf=$(shell tempfile --suffix .txt) \
+	    && python3.4 -c "import nssjson; print(nssjson.__doc__)" >> $$tf \
+	    && printf '\n\n' >> $$tf \
+	    && cat README.rst >> $$tf \
 	    && python3.4 -m doctest $$tf \
 	    && rm $$tf
