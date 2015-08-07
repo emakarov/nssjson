@@ -1,7 +1,7 @@
 Changes
 -------
 
-0.7 (unreleased)
+0.7 (2015-08-07)
 ~~~~~~~~~~~~~~~~
 
 * Optionally serialize/deserialize UUIDs

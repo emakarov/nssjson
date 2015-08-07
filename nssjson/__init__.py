@@ -191,7 +191,7 @@ Using :mod:`nssjson.tool` from the shell to validate and pretty-print::
 
 from __future__ import absolute_import
 
-__version__ = '0.6'
+__version__ = '0.7'
 __all__ = [
     'dump', 'dumps', 'load', 'loads',
     'JSONDecoder', 'JSONDecodeError', 'JSONEncoder',
