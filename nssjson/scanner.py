@@ -78,6 +78,7 @@ def py_make_scanner(context):
     object_hook = context.object_hook
     object_pairs_hook = context.object_pairs_hook
     iso_datetime = context.iso_datetime
+    handle_uuid = context.handle_uuid
     memo = context.memo
 
     def _scan_once(string, idx):
@@ -88,10 +89,11 @@ def py_make_scanner(context):
             raise JSONDecodeError(errmsg, string, idx)
 
         if nextchar == '"':
-            return parse_string(string, idx + 1, encoding, strict, iso_datetime)
+            return parse_string(string, idx + 1, encoding, strict, iso_datetime, handle_uuid)
         elif nextchar == '{':
             return parse_object((string, idx + 1), encoding, strict,
-                _scan_once, object_hook, object_pairs_hook, iso_datetime, memo)
+                                _scan_once, object_hook, object_pairs_hook, iso_datetime,
+                                handle_uuid, memo)
         elif nextchar == '[':
             return parse_array((string, idx + 1), _scan_once)
         elif nextchar == 'n' and string[idx:idx + 4] == 'null':

@@ -160,6 +160,16 @@ the scanner recognizes also times and timestamps with only three digits after th
     >>> json.loads('"0001-12-25 10:20:30.123Z"', iso_datetime=True) # doctest:+ELLIPSIS
     datetime.datetime(1, 12, 25, 10, 20, 30, 123000, tzinfo=...utc...)
 
+UUIDs can be handled effortless too::
+
+    >>> from uuid import UUID
+    >>> json.loads('"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"', handle_uuid=True)
+    UUID('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    >>> str(json.loads('"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaz"', handle_uuid=True))
+    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaz'
+    >>> json.dumps(UUID(int=1), handle_uuid=True)
+    '"00000000-0000-0000-0000-000000000001"'
+
 Using :mod:`nssjson.tool` from the shell to validate and pretty-print::
 
 .. highlight:: none

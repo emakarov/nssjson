@@ -2,10 +2,12 @@
 """
 from __future__ import absolute_import
 from datetime import date, datetime, time
+import uuid
 import re
 import sys
 import struct
-from .compat import fromhex, u, text_type, binary_type, PY3, unichr, utc
+from string import hexdigits
+from .compat import fromhex, u, string_types, text_type, binary_type, PY3, unichr, utc
 from .scanner import make_scanner, JSONDecodeError
 
 def _import_c_scanstring():
@@ -110,17 +112,32 @@ def _datetime_or_string(string, _date=date, _datetime=datetime, _time=time):
 
     return string
 
-def py_scanstring(s, end, encoding=None, strict=True, iso_datetime=False,
+def _uuid_or_string(s, _uuid=uuid, _hexdigits=hexdigits):
+    l = len(s)
+
+    if l == 36 and s[8] == s[13] == s[18] == s[23] == '-':
+        ss = ''.join(s.split('-'))
+        if all(c in _hexdigits for c in ss):
+            return _uuid.UUID(ss)
+
+    return s
+
+def py_scanstring(s, end, encoding=None, strict=True,
+                  iso_datetime=False, handle_uuid=False,
                   _b=BACKSLASH, _m=STRINGCHUNK.match, _join=u('').join,
                   _PY3=PY3, _maxunicode=sys.maxunicode):
-    """Scan the string s for a JSON string. End is the index of the
+    """Scan the string `s` for a JSON string. End is the index of the
     character in s after the quote that started the JSON string.
     Unescapes all valid JSON string escape sequences and raises ValueError
     on attempt to decode an invalid string. If strict is False then literal
     control characters are allowed in the string.
 
-    If iso_datetime is True then strings may contain ISO formatted datetime,
+    If `iso_datetime` is True then strings may contain ISO formatted datetime,
     date or time.
+
+    If `handle_uuid` is True then strings may contain UUID value formatted as
+    a string value with its 36 characters canonical representation, like
+    fe986c54-3bb7-11e5-aa35-3085a99ccac7.
 
     Returns a tuple of the decoded string and the index of the character in s
     after the end quote."""
@@ -201,6 +218,9 @@ def py_scanstring(s, end, encoding=None, strict=True, iso_datetime=False,
     s = _join(chunks)
     if iso_datetime:
         s = _datetime_or_string(s)
+    if handle_uuid and isinstance(s, string_types):
+        s = _uuid_or_string(s)
+
     return s, end
 
 
@@ -211,8 +231,8 @@ WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
 WHITESPACE_STR = ' \t\n\r'
 
 def JSONObject(state, encoding, strict, scan_once, object_hook,
-        object_pairs_hook, iso_datetime, memo=None,
-        _w=WHITESPACE.match, _ws=WHITESPACE_STR):
+               object_pairs_hook, iso_datetime, handle_uuid, memo=None,
+               _w=WHITESPACE.match, _ws=WHITESPACE_STR):
     (s, end) = state
     # Backwards compatibility
     if memo is None:
@@ -242,7 +262,8 @@ def JSONObject(state, encoding, strict, scan_once, object_hook,
                 s, end)
     end += 1
     while True:
-        key, end = scanstring(s, end, encoding, strict, iso_datetime)
+        key, end = scanstring(s, end, encoding, strict, iso_datetime,
+                              uuid.UUID if handle_uuid else None)
         key = memo_get(key, key)
 
         # To skip some function call overhead we optimize the fast paths where
@@ -372,6 +393,7 @@ class JSONDecoder(object):
     SENSIBLE_DEFAULTS = {
         'encoding': None,
         'iso_datetime': False,
+        'handle_uuid': False,
         'object_hook': None,
         'object_pairs_hook': None,
         'parse_constant': None,
@@ -422,6 +444,10 @@ class JSONDecoder(object):
           control character in a string: ``True`` means that unescaped control characters are
           parse errors, if ``False`` then control characters will be allowed in strings
           [default: ``True``]
+
+        :keyword bool handle_uuid: if ``True``, the it will activate the recognition of JSON
+          strings containing the canonical UUID representation (i.e.
+          "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
         """
 
         defaults = self.SENSIBLE_DEFAULTS
@@ -444,6 +470,8 @@ class JSONDecoder(object):
         self.strict = strict
         iso_datetime = kw.get('iso_datetime', defaults['iso_datetime'])
         self.iso_datetime = iso_datetime
+        handle_uuid = kw.get('handle_uuid', defaults['handle_uuid'])
+        self.handle_uuid = handle_uuid
         self.parse_object = JSONObject
         self.parse_array = JSONArray
         self.parse_string = scanstring

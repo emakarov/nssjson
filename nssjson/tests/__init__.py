@@ -38,6 +38,7 @@ def all_tests_suite():
         'nssjson.tests.test_unicode',
         'nssjson.tests.test_decimal',
         'nssjson.tests.test_datetime',
+        'nssjson.tests.test_uuid',
         'nssjson.tests.test_tuple',
         'nssjson.tests.test_namedtuple',
         'nssjson.tests.test_tool',

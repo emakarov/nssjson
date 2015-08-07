@@ -5,6 +5,7 @@ import re
 from operator import itemgetter
 from datetime import date, datetime, time
 from decimal import Decimal
+from uuid import UUID
 from .compat import u, unichr, binary_type, string_types, integer_types, PY3, utc
 def _import_speedups():
     try:
@@ -124,6 +125,7 @@ class JSONEncoder(object):
         'encoding': 'utf-8',
         'ensure_ascii': True,
         'for_json': False,
+        'handle_uuid': False,
         'ignore_nan': False,
         'indent': None,
         'iso_datetime': False,
@@ -186,6 +188,10 @@ class JSONEncoder(object):
           and ``datetime.time`` will be directly supported; otherwise they will raise a
           ``ValueError`` (if not handled by the `default` function) [default: ``False``]
 
+        :keyword bool handle_uuid: if ``True``, then UUIDs will be directly supported,
+          otherwise they will raise a ``ValueError`` (if not handled by the `default` function)
+          [default: ``False``]
+
         :keyword callable item_sort_key: used to sort the items in each dictionary, useful if
           you want to sort items other than in alphabetical order by key; this option takes
           precedence over `sort_keys` [default: ``None``]
@@ -213,6 +219,10 @@ class JSONEncoder(object):
 
         :keyword bool utc_datetime: if ``True``, then timezone aware datetimes are converted to
           UTC upon serialization [default: ``False``]
+
+        :keyword bool handle_uuid: if ``True``, then :class:`uuid.UUID` instances will be
+          serialized to JSON as strings with their canonical representation
+          [default: ``False``]
         """
 
         defaults = self.SENSIBLE_DEFAULTS
@@ -233,6 +243,8 @@ class JSONEncoder(object):
         self.iso_datetime = iso_datetime
         utc_datetime = kw.get('utc_datetime', defaults['utc_datetime'])
         self.utc_datetime = utc_datetime
+        handle_uuid = kw.get('handle_uuid', defaults['handle_uuid'])
+        self.handle_uuid = handle_uuid
         namedtuple_as_object = kw.get('namedtuple_as_object', defaults['namedtuple_as_object'])
         self.namedtuple_as_object = namedtuple_as_object
         tuple_as_array = kw.get('tuple_as_array', defaults['tuple_as_array'])
@@ -367,6 +379,7 @@ class JSONEncoder(object):
                 self.key_separator, self.item_separator, self.sort_keys,
                 self.skipkeys, self.allow_nan, key_memo,
                 self.use_decimal, self.iso_datetime, self.utc_datetime,
+                UUID if self.handle_uuid else None,
                 self.namedtuple_as_object, self.tuple_as_array,
                 self.bigint_as_string, self.item_sort_key,
                 self.encoding, self.for_json, self.ignore_nan,
@@ -377,10 +390,11 @@ class JSONEncoder(object):
                 self.key_separator, self.item_separator, self.sort_keys,
                 self.skipkeys,
                 self.use_decimal, self.iso_datetime, self.utc_datetime,
+                self.handle_uuid,
                 self.namedtuple_as_object, self.tuple_as_array,
                 self.bigint_as_string, self.item_sort_key,
                 self.encoding, self.for_json,
-                Decimal=Decimal)
+                Decimal=Decimal, UUID=UUID)
         try:
             return _iterencode(o, 0)
         finally:
@@ -417,7 +431,8 @@ class JSONEncoderForHTML(JSONEncoder):
 def _make_iterencode(
         markers, _default, _encoder, _indent, _floatstr, _key_separator,
         _item_separator, _sort_keys, _skipkeys, _use_decimal,
-        _iso_datetime, _utc_datetime, _namedtuple_as_object, _tuple_as_array,
+        _iso_datetime, _utc_datetime, _handle_uuid,
+        _namedtuple_as_object, _tuple_as_array,
         _bigint_as_string, _item_sort_key, _encoding, _for_json,
         ## HACK: hand-optimized bytecode; turn globals into locals
         _PY3=PY3,
@@ -436,6 +451,7 @@ def _make_iterencode(
         date=date,
         time=time,
         utc=utc,
+        UUID=UUID,
     ):
     if _item_sort_key and not callable(_item_sort_key):
         raise TypeError("item_sort_key must be None or callable")
@@ -498,6 +514,8 @@ def _make_iterencode(
                     yield buf + '"%s"' % value.isoformat().split('+')[0]
             elif _iso_datetime and isinstance(value, (date, time)):
                 yield buf + '"%s"' % value.isoformat()
+            elif _handle_uuid and isinstance(value, UUID):
+                yield buf + '"%s"' % value
             else:
                 yield buf
                 for_json = _for_json and getattr(value, 'for_json', None)
@@ -556,6 +574,8 @@ def _make_iterencode(
                 key = '%s' % key.isoformat().split('+')[0]
         elif _iso_datetime and isinstance(key, (date, time)):
             key = key.isoformat()
+        elif _handle_uuid and isinstance(key, UUID):
+            key = str(key)
         elif _skipkeys:
             key = None
         else:
@@ -640,6 +660,8 @@ def _make_iterencode(
                     yield '"%s"' % value.isoformat().split('+')[0]
             elif _iso_datetime and isinstance(value, (date, time)):
                 yield '"%s"' % value.isoformat()
+            elif _handle_uuid and isinstance(value, UUID):
+                yield '"%s"' % value
             else:
                 for_json = _for_json and getattr(value, 'for_json', None)
                 if for_json and callable(for_json):
@@ -719,6 +741,8 @@ def _make_iterencode(
                         yield '"%s"' % o.isoformat().split('+')[0]
                 elif _iso_datetime and isinstance(o, (date, time)):
                     yield '"%s"' % o.isoformat()
+                elif _handle_uuid and isinstance(o, UUID):
+                    yield '"%s"' % o
                 else:
                     if markers is not None:
                         markerid = id(o)
